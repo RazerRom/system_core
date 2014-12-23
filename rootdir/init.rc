@@ -9,6 +9,9 @@ import /init.usb.rc
 import /init.${ro.hardware}.rc
 import /init.${ro.zygote}.rc
 import /init.trace.rc
+# Include Optipop's extra init file
+import /init.opti.rc
+
 
 on early-init
     # Set init and its forked children's oom_adj.
@@ -610,6 +613,11 @@ service bootanim /system/bin/bootanimation
     user graphics
     group graphics audio
     disabled
+    oneshot
+
+service sysinit /system/bin/sysinit
+    user root
+    group root
     oneshot
 
 service installd /system/bin/installd
