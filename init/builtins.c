@@ -54,6 +54,8 @@ int add_environment(const char *name, const char *value);
 extern int init_module(void *, unsigned long, const char *);
 extern int init_export_rc_file(const char *);
 
+static int do_exec_internal(int nargs, char **args, int context);
+
 static int write_file(const char *path, const char *value)
 {
     int fd, ret, len;
@@ -173,7 +175,7 @@ static int __ifupdown(const char *interface, int up)
         ifr.ifr_flags &= ~IFF_UP;
 
     ret = ioctl(s, SIOCSIFFLAGS, &ifr);
-    
+
 done:
     close(s);
     return ret;
@@ -262,9 +264,20 @@ int do_enable(int nargs, char **args)
 #define MAX_PARAMETERS 64
 int do_exec(int nargs, char **args)
 {
+    return do_exec_internal(nargs, args, 0);
+}
+
+int do_exec_context(int nargs, char **args)
+{
+    return do_exec_internal(nargs, args, 1);
+}
+
+static int do_exec_internal(int nargs, char **args, int context)
+{
     pid_t pid;
     int status, i, j;
     char *par[MAX_PARAMETERS];
+    char* contextParam = NULL;
     char prop_val[PROP_VALUE_MAX];
     int len;
 
@@ -273,7 +286,14 @@ int do_exec(int nargs, char **args)
         return -1;
     }
 
-    for(i=0, j=1; i<(nargs-1) ;i++,j++)
+    i=0;
+    j=1;
+    if(context)
+    {
+        contextParam = args[j];
+        j++;
+    }
+    for(;i<(nargs-1) ;i++,j++)
     {
         if ((args[j])
             &&
@@ -304,6 +324,12 @@ int do_exec(int nargs, char **args)
         get_property_workspace(&fd, &sz);
         sprintf(tmp, "%d,%d", dup(fd), sz);
         setenv("ANDROID_PROPERTY_WORKSPACE", tmp, 1);
+        if (context && contextParam != NULL) {
+            if (is_selinux_enabled() > 0 && setexeccon(contextParam) < 0) {
+                ERROR("cannot setexeccon('%s'): %s\n", contextParam, strerror(errno));
+                _exit(127);
+            }
+        }
         execve(par[0], par, environ);
         exit(0);
     }
@@ -787,7 +813,7 @@ int do_sysclktz(int nargs, char **args)
         return -1;
 
     memset(&tz, 0, sizeof(tz));
-    tz.tz_minuteswest = atoi(args[1]);   
+    tz.tz_minuteswest = atoi(args[1]);
     if (settimeofday(NULL, &tz))
         return -1;
     return 0;
@@ -820,10 +846,10 @@ int do_copy(int nargs, char **args)
     if (nargs != 3)
         return -1;
 
-    if (stat(args[1], &info) < 0) 
+    if (stat(args[1], &info) < 0)
         return -1;
 
-    if ((fd1 = open(args[1], O_RDONLY)) < 0) 
+    if ((fd1 = open(args[1], O_RDONLY)) < 0)
         goto out_err;
 
     if ((fd2 = open(args[2], O_WRONLY|O_CREAT|O_TRUNC, 0660)) < 0)
