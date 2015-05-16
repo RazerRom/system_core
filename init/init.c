@@ -917,29 +917,6 @@ static bool selinux_is_disabled(void)
     return false;
 }
 
-static bool selinux_is_enforcing(void)
-{
-#ifdef ALLOW_DISABLE_SELINUX
-    char tmp[PROP_VALUE_MAX];
-
-    if (property_get("ro.boot.selinux", tmp) == 0) {
-        /* Property is not set.  Assume enforcing */
-        return true;
-    }
-
-    if (strcmp(tmp, "permissive") == 0) {
-        /* SELinux is in the kernel, but we've been told to go into permissive mode */
-        return false;
-    }
-
-    if (strcmp(tmp, "enforcing") != 0) {
-        ERROR("SELinux: Unknown value of ro.boot.selinux. Got: \"%s\". Assuming enforcing.\n", tmp);
-    }
-
-#endif
-    return true;
-}
-
 int selinux_reload_policy(void)
 {
     if (selinux_is_disabled()) {
@@ -1003,7 +980,7 @@ static void selinux_initialize(void)
     }
 
     selinux_init_all_handles();
-    bool is_enforcing = selinux_is_enforcing();
+    bool is_enforcing = false;
     INFO("SELinux: security_setenforce(%d)\n", is_enforcing);
     security_setenforce(is_enforcing);
 }
