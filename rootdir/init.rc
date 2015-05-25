@@ -9,9 +9,6 @@ import /init.usb.rc
 import /init.${ro.hardware}.rc
 import /init.${ro.zygote}.rc
 import /init.trace.rc
-# Include Optipop's extra init file
-import /init.opti.rc
-
 
 on early-init
     # Set init and its forked children's oom_adj.
@@ -614,19 +611,14 @@ service bootanim /system/bin/bootanimation
     disabled
     oneshot
 
-service sysinit /system/bin/sysinit
-    user root
-    group root
-    oneshot
-
 service installd /system/bin/installd
     class main
     socket installd stream 600 system system
 
-#service flash_recovery /system/bin/install-recovery.sh
-#    class main
-#    seclabel u:r:install_recovery:s0
-#    oneshot
+service flash_recovery /system/bin/install-recovery.sh
+    class main
+    seclabel u:r:install_recovery:s0
+    oneshot
 
 service racoon /system/bin/racoon
     class main
